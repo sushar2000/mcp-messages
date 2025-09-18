@@ -81,12 +81,46 @@ def load_tsv_to_table(tsv_path):
                 count += 1
         conn.commit()
         print(f"Total {count} rows inserted.")
+        return count
 
 
 if __name__ == '__main__':
-    # Get TSV file path from config or use default
-    tsv_file_path = config.get('file_path')
+    import argparse
 
+    parser = argparse.ArgumentParser(
+        description='Load all TSV files from config into database')
+    parser.add_argument('-c', '--config', default='config.json',
+                        help='Path to configuration file (default: config.json)')
+    args = parser.parse_args()
+
+    # Reload config if different config file specified
+    if args.config != 'config.json':
+        config = load_config(args.config)
+        if not config:
+            print("Failed to load configuration. Exiting.")
+            exit(1)
+
+    # Get all files from config
+    file_paths = config.get('file_paths', [])
+
+    if not file_paths:
+        print("Error: No file paths found in config file")
+        print("Please add 'file_paths' array to your config.json")
+        exit(1)
+
+    print(f"Loading {len(file_paths)} files from config...")
     create_db_and_table()
-    load_tsv_to_table(tsv_file_path)
-    print('Data loaded successfully.')
+
+    total_rows = 0
+    for i, tsv_file_path in enumerate(file_paths, 1):
+        print(f"\nProcessing file {i}/{len(file_paths)}: {tsv_file_path}")
+        try:
+            rows_inserted = load_tsv_to_table(tsv_file_path)
+            total_rows += rows_inserted
+            print(
+                f"Successfully loaded {rows_inserted} rows from {tsv_file_path}")
+        except Exception as e:
+            print(f"Error loading {tsv_file_path}: {e}")
+
+    print(f"\nTotal rows loaded from all files: {total_rows}")
+    print('All data loaded successfully.')

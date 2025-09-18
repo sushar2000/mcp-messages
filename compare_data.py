@@ -368,9 +368,7 @@ def compare_data(tsv_file_path, verbose=False, limit=None):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
-        description='Compare KKChat table with TSV file')
-    parser.add_argument('tsv_file', nargs='?', default=None,
-                        help='Path to the TSV file to compare (optional if specified in config)')
+        description='Compare KKChat table with all TSV files from config')
     parser.add_argument('-v', '--verbose', nargs='?', const='brief', default=False,
                         choices=['brief', 'standard', 'all'],
                         help='Show detailed row-by-row comparison information. Options: brief (no matching rows), standard (sample), all (all matching rows)')
@@ -384,19 +382,22 @@ if __name__ == '__main__':
     if not initialize_config(args.config):
         exit(1)
 
-    # Determine TSV file path - use command line argument or config file
-    tsv_file_path = args.tsv_file
-    if not tsv_file_path:
-        tsv_file_path = config.get('file_path')
-        if not tsv_file_path:
-            print(
-                "Error: TSV file path must be provided either as command line argument or in config file")
-            exit(1)
+    # Get all files from config
+    file_paths = config.get('file_paths', [])
 
-    try:
-        compare_data(tsv_file_path=tsv_file_path,
-                     verbose=args.verbose, limit=args.limit)
-    except Exception as e:
-        print(f"Error during comparison: {e}")
-        import traceback
-        traceback.print_exc()
+    if not file_paths:
+        print("Error: No file paths found in config file")
+        print("Please add 'file_paths' array to your config.json")
+        exit(1)
+
+    print(f"Processing {len(file_paths)} files from config...")
+    for i, tsv_file_path in enumerate(file_paths, 1):
+        print(
+            f"\n{Colors.CYAN}=== Processing file {i}/{len(file_paths)}: {tsv_file_path} ==={Colors.RESET}")
+        try:
+            compare_data(tsv_file_path=tsv_file_path,
+                         verbose=args.verbose, limit=args.limit)
+        except Exception as e:
+            print(f"Error processing {tsv_file_path}: {e}")
+            import traceback
+            traceback.print_exc()
