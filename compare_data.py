@@ -96,12 +96,12 @@ def read_tsv_file(file_path):
 
 
 def read_db_table():
-    """Read KKChat table and return list of tuples (date, sender, message)"""
+    """Read KKChat table and return list of tuples (message_date, message_sender, message_text)"""
     db_data = []
     try:
         with pyodbc.connect(conn_str) as conn:
             cursor = conn.cursor()
-            query = f"SELECT DateColumn, SenderColumn, MessageColumn FROM {table_name} ORDER BY DateColumn, SenderColumn, MessageColumn"
+            query = f"SELECT message_datetime, message_sender, message_text FROM {table_name} ORDER BY message_datetime, message_sender, message_text"
             cursor.execute(query)
             for row in cursor:
                 date_obj = row[0]

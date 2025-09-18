@@ -56,9 +56,10 @@ def create_db_and_table():
         cursor.execute(f'''
             IF OBJECT_ID('{table_name}', 'U') IS NULL
             CREATE TABLE {table_name} (
-                DateColumn DATE,
-                SenderColumn NVARCHAR(100),
-                MessageColumn NVARCHAR(MAX)
+                message_datetime DATETIME NOT NULL,
+                message_sender NVARCHAR(100) NOT NULL,
+                message_text NVARCHAR(MAX) NULL,
+                embedding VARBINARY(MAX) NULL
             );
         ''')
         conn.commit()
@@ -75,7 +76,7 @@ def load_tsv_to_table(tsv_path):
                     continue  # skip malformed lines
                 date, sender, message = parts
                 cursor.execute(
-                    f"INSERT INTO {table_name} (DateColumn, SenderColumn, MessageColumn) VALUES (?, ?, ?)",
+                    f"INSERT INTO {table_name} (message_datetime, message_sender, message_text) VALUES (?, ?, ?)",
                     date, sender, message
                 )
                 count += 1

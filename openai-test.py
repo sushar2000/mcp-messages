@@ -1,3 +1,4 @@
+from langchain_openai import OpenAIEmbeddings
 from langchain_openai import ChatOpenAI
 import json
 
@@ -6,6 +7,7 @@ def load_config(config_file='config.json'):
     """Load configuration from JSON file"""
     try:
         with open(config_file, 'r', encoding='utf-8') as f:
+            print(f"Configuration loaded from  file '{config_file}'")
             return json.load(f)
     except FileNotFoundError:
         print(f"Error: Configuration file '{config_file}' not found")
@@ -33,6 +35,40 @@ client = ChatOpenAI(
     api_key=api_key
 )
 
-response = client.invoke("Write a haiku about ai.")
+try:
+    response = client.invoke("Write a haiku about ai.")
 
-print(response.content)
+    print(response.content)
+
+except Exception as e:
+    print(f"Error occurred: {e}")
+    exit(1)
+
+
+# Define your embedding settings
+EMBEDDING_MODEL_URL = "https://int.lionis.ai/api/v1/vectors"
+EMBEDDING_MODEL_NAME = "text-embedding-3-large"
+OPENAI_API_KEY = api_key
+
+# Initialize embeddings
+embeddings = OpenAIEmbeddings(
+    model=EMBEDDING_MODEL_NAME,
+    openai_api_base=EMBEDDING_MODEL_URL,
+    openai_api_key=OPENAI_API_KEY,
+)
+
+# Example 1: Single text
+text = "Artificial intelligence is transforming the world."
+vector = embeddings.embed_query(text)
+print("Embedding length:", len(vector))
+print("First 10 dims:", vector[:10])
+
+# Example 2: Multiple documents
+docs = [
+    "Machine learning is a subset of AI.",
+    "Neural networks are inspired by the human brain.",
+    "Large language models are powerful tools for NLP."
+]
+vectors = embeddings.embed_documents(docs)
+print("Number of embeddings:", len(vectors))
+print("Embedding length for each:", len(vectors[0]))

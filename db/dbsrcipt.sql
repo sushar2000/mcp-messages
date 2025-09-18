@@ -6,14 +6,11 @@ USE WhatsAppDB;
 -- IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[KKChat]') AND type in (N'U'))
 --     DROP TABLE [dbo].[KKChat]
 --     CREATE TABLE KKChat (
---         DateColumn DATETIME,
---         SenderColumn NVARCHAR(100),
---         MessageColumn NVARCHAR(MAX)
+--         message_datetime DATETIME,
+--         message_sender NVARCHAR(100),
+--         message_text NVARCHAR(MAX)
 --     );
 -- GO
-
--- ALTER TABLE KKChat
--- ADD embedding VARBINARY(MAX);
 
 -- BULK INSERT KKChat
 -- FROM '/var/opt/mssql/data/KKchat.tsv'
@@ -23,6 +20,9 @@ USE WhatsAppDB;
 --     FIRSTROW = 0             -- Skip header row if present
 -- );
 
+
+-- ALTER TABLE KKChat
+-- ADD embedding VARBINARY(MAX);
 
 SELECT TOP 10 * FROM KKChat;
 
@@ -45,4 +45,9 @@ sp_help KKChat;
 
 -- 4. Drop it
 -- DROP TABLE VectorCheck;
+
+-- EXEC sp_rename 'KKChat.MessageColumn', 'message_text', 'COLUMN';
+-- EXEC sp_rename 'KKChat.SenderColumn', 'message_sender', 'COLUMN';
+-- EXEC sp_rename 'KKChat.DateColumn', 'message_datetime', 'COLUMN';
+EXEC sp_rename 'KKChat', 'KKChatOld', 'OBJECT';
 
