@@ -1,0 +1,16 @@
+services:
+  mssql:
+    image: mcr.microsoft.com/mssql/server:2025-latest
+    container_name: mssql
+    restart: always
+    ports:
+      - "1433:1433"
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "xxxxxxxx" # change this if needed
+      MSSQL_PID: "Developer"
+    volumes:
+      - /srv/mssql/data:/var/opt/mssql/data
+      - /srv/mssql/log:/var/opt/mssql/log
+      - /srv/mssql/secrets:/var/opt/mssql/secrets
+      - /:/host
