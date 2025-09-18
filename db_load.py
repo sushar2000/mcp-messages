@@ -3,6 +3,8 @@ import pyodbc
 import json
 import os
 
+from compare_data import Colors
+
 
 def load_config(config_file='config.json'):
     """Load database configuration from JSON file"""
@@ -71,10 +73,23 @@ def load_tsv_to_table(tsv_path):
         count = 0
         with open(tsv_path, 'r', encoding='utf-8') as f:
             for line in f:
+                # Print after inserting 100 rows
+                if count > 0 and count % 100 == 0:
+                    print(f"{count} rows inserted...")
+                    conn.commit()
+
                 parts = line.strip().split('\t')
-                if len(parts) != 3:
+                if len(parts) < 3:
+                    print(
+                        f"{Colors.RED}Skipping malformed line: {line.strip()}{Colors.RESET}")
                     continue  # skip malformed lines
-                date, sender, message = parts
+                date = parts[0]
+                sender = parts[1]
+                if len(parts) > 3:
+                    message = '\t'.join(parts[2:])
+                else:
+                    message = parts[2]
+
                 cursor.execute(
                     f"INSERT INTO {table_name} (message_datetime, message_sender, message_text) VALUES (?, ?, ?)",
                     date, sender, message

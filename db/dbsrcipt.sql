@@ -1,32 +1,41 @@
 --CREATE DATABASE WhatsAppDB;
 
 
-USE WhatsAppDB;
+-- USE WhatsAppDB;
 
 -- IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[KKChat]') AND type in (N'U'))
 --     DROP TABLE [dbo].[KKChat]
 --     CREATE TABLE KKChat (
---         message_datetime DATETIME,
---         message_sender NVARCHAR(100),
---         message_text NVARCHAR(MAX)
+--         message_datetime DATETIME NOT NULL,
+--         message_sender NVARCHAR(100) NOT NULL,
+--         message_text NVARCHAR(MAX) NULL,
+--         embedding VARBINARY(MAX) NULL
 --     );
 -- GO
 
--- BULK INSERT KKChat
--- FROM '/var/opt/mssql/data/KKchat.tsv'
--- WITH (
---     FIELDTERMINATOR = '\t',  -- Tab-separated
---     ROWTERMINATOR = '\n',
---     FIRSTROW = 0             -- Skip header row if present
--- );
+-- Drop the embedding column temporarily
+ALTER TABLE KKChat DROP COLUMN embedding;
+
+-- Do the bulk insert
+BULK INSERT KKChat
+FROM '/home/sushar/KKchat.tsv'
+WITH (
+    FIELDTERMINATOR = '\t',
+    ROWTERMINATOR = '\n',
+    FIRSTROW = 0
+);
+
+-- Add the embedding column back
+ALTER TABLE KKChat ADD embedding VARBINARY(MAX) NULL;
 
 
--- ALTER TABLE KKChat
--- ADD embedding VARBINARY(MAX);
+
 
 SELECT TOP 10 * FROM KKChat;
 
-sp_help KKChat;
+-- DELETE FROM KKChat ;
+
+-- sp_help KKChat;
 
 
 -- SELECT @@VERSION;

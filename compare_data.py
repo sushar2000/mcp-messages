@@ -84,7 +84,7 @@ def read_tsv_file(file_path):
                     tsv_data.append((line_num, date_str, sender, message))
                 else:
                     print(
-                        f"Warning: Line {line_num} has only {len(parts)} columns: {line}")
+                        f"{Colors.YELLOW}Warning: Line {line_num} has only {len(parts)} columns: {line}{Colors.RESET}")
     except FileNotFoundError:
         print(f"Error: File {file_path} not found")
         return []
