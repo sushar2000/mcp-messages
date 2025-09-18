@@ -1,6 +1,11 @@
+from datetime import datetime
+from xml.parsers.expat import model
 from langchain_openai import OpenAIEmbeddings
 from langchain_openai import ChatOpenAI
 import json
+
+
+from compare_data import Colors
 
 
 def load_config(config_file='config.json'):
@@ -25,30 +30,30 @@ if not config:
 
 # Get OpenAI configuration from config file or use defaults
 openai_config = config.get('openai', {})
-model = openai_config.get('model', 'gpt-4o')
-base_url = openai_config.get('base_url')
-api_key = openai_config.get('api_key')
+LLM_MODEL_NAME = openai_config.get('model', 'gpt-4o')
+EMBEDDING_MODEL_NAME = "text-embedding-3-large"
+
+ENV_URL = openai_config.get('env_url')
+OPENAI_API_KEY = openai_config.get('api_key')
+
+LLM_API_URL = ENV_URL+"/api/v1/llm/"
+EMBEDDING_MODEL_URL = ENV_URL+"/api/v1/vectors"
 
 client = ChatOpenAI(
-    model=model,
-    base_url=base_url,
-    api_key=api_key
+    model=LLM_MODEL_NAME,
+    base_url=LLM_API_URL,
+    api_key=OPENAI_API_KEY
 )
 
 try:
     response = client.invoke("Write a haiku about ai.")
-
     print(response.content)
-
 except Exception as e:
     print(f"Error occurred: {e}")
     exit(1)
 
 
 # Define your embedding settings
-EMBEDDING_MODEL_URL = "https://int.lionis.ai/api/v1/vectors"
-EMBEDDING_MODEL_NAME = "text-embedding-3-large"
-OPENAI_API_KEY = api_key
 
 # Initialize embeddings
 embeddings = OpenAIEmbeddings(
@@ -56,14 +61,16 @@ embeddings = OpenAIEmbeddings(
     openai_api_base=EMBEDDING_MODEL_URL,
     openai_api_key=OPENAI_API_KEY,
 )
+print("Embeddings initialized with model:", EMBEDDING_MODEL_NAME)
 
-# Example 1: Single text
+t1 = datetime.now()
+print("Example 1: Single text")
 text = "Artificial intelligence is transforming the world."
 vector = embeddings.embed_query(text)
 print("Embedding length:", len(vector))
 print("First 10 dims:", vector[:10])
 
-# Example 2: Multiple documents
+print("Example 2: Multiple documents")
 docs = [
     "Machine learning is a subset of AI.",
     "Neural networks are inspired by the human brain.",
@@ -72,3 +79,6 @@ docs = [
 vectors = embeddings.embed_documents(docs)
 print("Number of embeddings:", len(vectors))
 print("Embedding length for each:", len(vectors[0]))
+print("First 10 dims:", vectors[0][:10])
+t2 = datetime.now()
+print("Time taken:", Colors.GREEN, t2 - t1, Colors.RESET)

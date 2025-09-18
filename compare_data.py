@@ -12,7 +12,6 @@ from collections import defaultdict
 class Colors:
     GREEN = '\033[92m'     # Green for 100% matches
     YELLOW = '\033[93m'    # Yellow for 90-99% matches
-    # Cyan for numbers (same as command line text params)
     CYAN = '\033[96m'
     RED = '\033[91m'       # Red for errors
     RESET = '\033[0m'      # Reset to normal color
