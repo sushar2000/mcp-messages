@@ -58,6 +58,7 @@ def create_db_and_table():
         cursor.execute(f'''
             IF OBJECT_ID('{table_name}', 'U') IS NULL
             CREATE TABLE {table_name} (
+                message_id BIGINT IDENTITY PRIMARY KEY,
                 message_datetime DATETIME NOT NULL,
                 message_sender NVARCHAR(100) NOT NULL,
                 message_text NVARCHAR(MAX) NULL,
