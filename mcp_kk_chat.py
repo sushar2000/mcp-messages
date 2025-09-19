@@ -167,6 +167,137 @@ async def handle_list_tools() -> list[Tool]:
                 },
                 "required": ["query"]
             }
+        ),
+        Tool(
+            name="message_stats",
+            description="Get comprehensive statistics about messages and senders",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "sender": {
+                        "type": "string",
+                        "description": "Optional: Get stats for specific sender"
+                    },
+                    "date_range": {
+                        "type": "string",
+                        "description": "Optional: Date range (YYYY-MM-DD to YYYY-MM-DD)"
+                    }
+                }
+            }
+        ),
+        Tool(
+            name="timeline_analysis",
+            description="Analyze message patterns over time for a topic",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "topic": {
+                        "type": "string",
+                        "description": "Topic or keyword to track"
+                    },
+                    "grouping": {
+                        "type": "string",
+                        "description": "Time grouping: daily, weekly, monthly",
+                        "default": "weekly"
+                    }
+                },
+                "required": ["topic"]
+            }
+        ),
+        Tool(
+            name="sentiment_analysis",
+            description="Analyze sentiment of messages using AI",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "Search query or topic to analyze sentiment for"
+                    },
+                    "sender": {
+                        "type": "string",
+                        "description": "Optional: Specific sender to analyze"
+                    },
+                    "top_k": {
+                        "type": "integer",
+                        "description": "Number of messages to analyze",
+                        "default": 10
+                    }
+                },
+                "required": ["query"]
+            }
+        ),
+        Tool(
+            name="advanced_search",
+            description="Combined keyword, semantic, and filter search",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "Search query"
+                    },
+                    "sender": {
+                        "type": "string",
+                        "description": "Optional: Filter by sender"
+                    },
+                    "date_from": {
+                        "type": "string",
+                        "description": "Optional: Start date (YYYY-MM-DD)"
+                    },
+                    "date_to": {
+                        "type": "string",
+                        "description": "Optional: End date (YYYY-MM-DD)"
+                    },
+                    "search_type": {
+                        "type": "string",
+                        "description": "Search type: keyword, semantic, or both",
+                        "default": "both"
+                    },
+                    "top_k": {
+                        "type": "integer",
+                        "description": "Number of results to return",
+                        "default": 5
+                    }
+                },
+                "required": ["query"]
+            }
+        ),
+        Tool(
+            name="database_health",
+            description="Check database status, embedding coverage, and data quality",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "check_type": {
+                        "type": "string",
+                        "description": "Type of check: overview, embeddings, or duplicates",
+                        "default": "overview"
+                    }
+                }
+            }
+        ),
+        Tool(
+            name="activity_patterns",
+            description="Analyze user activity patterns by time (hourly, daily, weekly)",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "pattern_type": {
+                        "type": "string",
+                        "description": "Type of pattern analysis: hourly, daily, weekly, or monthly",
+                        "default": "hourly"
+                    },
+                    "sender": {
+                        "type": "string",
+                        "description": "Optional: Analyze patterns for specific sender"
+                    },
+                    "date_range": {
+                        "type": "string",
+                        "description": "Optional: Date range filter (last_week, last_month, last_year)"
+                    }
+                }
+            }
         )
     ]
 
@@ -178,6 +309,29 @@ async def handle_call_tool(name: str, arguments: dict) -> list[TextContent]:
         return await keyword_search(arguments.get("query"), arguments.get("top_k", 5))
     elif name == "semantic_search":
         return await semantic_search(arguments.get("query"), arguments.get("top_k", 5))
+    elif name == "message_stats":
+        return await message_stats(arguments.get("sender"), arguments.get("date_range"))
+    elif name == "timeline_analysis":
+        return await timeline_analysis(arguments.get("topic"), arguments.get("grouping", "weekly"))
+    elif name == "sentiment_analysis":
+        return await sentiment_analysis(arguments.get("query"), arguments.get("sender"), arguments.get("top_k", 10))
+    elif name == "advanced_search":
+        return await advanced_search(
+            arguments.get("query"),
+            arguments.get("sender"),
+            arguments.get("date_from"),
+            arguments.get("date_to"),
+            arguments.get("search_type", "both"),
+            arguments.get("top_k", 5)
+        )
+    elif name == "database_health":
+        return await database_health(arguments.get("check_type", "overview"))
+    elif name == "activity_patterns":
+        return await activity_patterns(
+            arguments.get("pattern_type", "hourly"),
+            arguments.get("sender"),
+            arguments.get("date_range")
+        )
     else:
         raise ValueError(f"Unknown tool: {name}")
 
@@ -278,6 +432,480 @@ async def semantic_search(query: str, top_k: int = 5) -> list[TextContent]:
         )]
 
 
+async def message_stats(sender: str = None, date_range: str = None) -> list[TextContent]:
+    """Get statistics about messages and senders"""
+    try:
+        conn = get_conn()
+        cursor = conn.cursor()
+
+        # Build query based on filters
+        base_query = f"SELECT message_sender, COUNT(*) as message_count FROM {table_name}"
+        conditions = []
+        params = []
+
+        if sender:
+            conditions.append("message_sender = ?")
+            params.append(sender)
+
+        if date_range:
+            if date_range == "last_week":
+                conditions.append(
+                    "message_datetime >= DATEADD(week, -1, GETDATE())")
+            elif date_range == "last_month":
+                conditions.append(
+                    "message_datetime >= DATEADD(month, -1, GETDATE())")
+            elif date_range == "last_year":
+                conditions.append(
+                    "message_datetime >= DATEADD(year, -1, GETDATE())")
+
+        if conditions:
+            base_query += " WHERE " + " AND ".join(conditions)
+
+        if not sender:
+            base_query += " GROUP BY message_sender ORDER BY message_count DESC"
+
+        cursor.execute(base_query, params)
+        results = cursor.fetchall()
+
+        # Get total stats
+        total_query = f"SELECT COUNT(*) as total_messages, COUNT(DISTINCT message_sender) as unique_senders FROM {table_name}"
+        if conditions:
+            total_query += " WHERE " + " AND ".join(conditions)
+        cursor.execute(total_query, params)
+        total_stats = cursor.fetchone()
+
+        conn.close()
+
+        # Format results
+        if sender:
+            result_text = f"Message statistics for {sender}:\n"
+            result_text += f"Total messages: {results[0][1] if results else 0}\n"
+        else:
+            result_text = f"Message statistics:\n"
+            result_text += f"Total messages: {total_stats[0]}\n"
+            result_text += f"Unique senders: {total_stats[1]}\n\n"
+            result_text += "Top senders:\n"
+            for sender_name, count in results[:10]:
+                result_text += f"- {sender_name}: {count} messages\n"
+
+        return [TextContent(type="text", text=result_text)]
+
+    except Exception as e:
+        return [TextContent(
+            type="text",
+            text=f"Statistics error: {str(e)}"
+        )]
+
+
+async def timeline_analysis(topic: str = None, grouping: str = "weekly") -> list[TextContent]:
+    """Analyze message patterns over time"""
+    try:
+        conn = get_conn()
+        cursor = conn.cursor()
+
+        # Build date grouping based on parameter
+        if grouping == "daily":
+            date_format = "CAST(message_datetime AS DATE)"
+            date_label = "Date"
+        elif grouping == "monthly":
+            date_format = "FORMAT(message_datetime, 'yyyy-MM')"
+            date_label = "Month"
+        else:  # weekly
+            date_format = "FORMAT(message_datetime, 'yyyy-\\WW')"
+            date_label = "Week"
+
+        query = f"""
+        SELECT {date_format} as period, COUNT(*) as message_count
+        FROM {table_name}
+        """
+
+        params = []
+        if topic:
+            query += " WHERE message_text LIKE ?"
+            params.append(f"%{topic}%")
+
+        query += f" GROUP BY {date_format} ORDER BY period DESC"
+
+        cursor.execute(query, params)
+        results = cursor.fetchall()
+        conn.close()
+
+        result_text = f"Timeline analysis ({grouping}):\n"
+        if topic:
+            result_text += f"Topic: {topic}\n\n"
+
+        for period, count in results[:20]:  # Show last 20 periods
+            result_text += f"{date_label} {period}: {count} messages\n"
+
+        return [TextContent(type="text", text=result_text)]
+
+    except Exception as e:
+        return [TextContent(
+            type="text",
+            text=f"Timeline analysis error: {str(e)}"
+        )]
+
+
+async def sentiment_analysis(query: str = None, sender: str = None, top_k: int = 10) -> list[TextContent]:
+    """Analyze sentiment of messages using AI"""
+    try:
+        conn = get_conn()
+        cursor = conn.cursor()
+
+        # Build query
+        base_query = f"""
+        SELECT TOP ({top_k}) message_text, message_sender, message_datetime 
+        FROM {table_name}
+        """
+
+        conditions = []
+        params = []
+
+        if query:
+            conditions.append("message_text LIKE ?")
+            params.append(f"%{query}%")
+
+        if sender:
+            conditions.append("message_sender = ?")
+            params.append(sender)
+
+        if conditions:
+            base_query += " WHERE " + " AND ".join(conditions)
+
+        base_query += " ORDER BY message_datetime DESC"
+
+        cursor.execute(base_query, params)
+        results = cursor.fetchall()
+        conn.close()
+
+        if not results:
+            return [TextContent(type="text", text="No messages found for sentiment analysis")]
+
+        # Use OpenAI LLM for sentiment analysis
+        messages_text = "\n".join([f"Message: {row[0]}" for row in results])
+
+        prompt = f"""Analyze the sentiment of these WhatsApp messages. For each message, provide:
+1. Overall sentiment (Positive/Negative/Neutral)
+2. Emotion detected (joy, sadness, anger, excitement, etc.)
+3. Brief explanation
+
+Messages to analyze:
+{messages_text}
+
+Provide a summary at the end with overall sentiment trends."""
+
+        response = client.chat.completions.create(
+            model=model,
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=1000
+        )
+
+        result_text = f"Sentiment Analysis Results:\n"
+        if query:
+            result_text += f"Query: {query}\n"
+        if sender:
+            result_text += f"Sender: {sender}\n"
+        result_text += f"Analyzed {len(results)} messages\n\n"
+        result_text += response.choices[0].message.content
+
+        return [TextContent(type="text", text=result_text)]
+
+    except Exception as e:
+        return [TextContent(
+            type="text",
+            text=f"Sentiment analysis error: {str(e)}"
+        )]
+
+
+async def advanced_search(query: str, sender: str = None, date_from: str = None,
+                          date_to: str = None, search_type: str = "both", top_k: int = 5) -> list[TextContent]:
+    """Advanced search with multiple filters and search types"""
+    try:
+        results = []
+
+        # Keyword search component
+        if search_type in ["keyword", "both"]:
+            keyword_results = await keyword_search(query, top_k)
+            if keyword_results and keyword_results[0].text != "No messages found.":
+                results.extend(keyword_results)
+
+        # Semantic search component (if available)
+        if search_type in ["semantic", "both"]:
+            try:
+                semantic_results = await semantic_search(query, top_k)
+                if semantic_results and not semantic_results[0].text.startswith("Error performing semantic search"):
+                    results.extend(semantic_results)
+            except:
+                pass  # Semantic search might fail due to JWT or missing embeddings
+
+        # Apply additional filters if we have database access
+        if sender or date_from or date_to:
+            conn = get_conn()
+            cursor = conn.cursor()
+
+            filter_query = f"""
+            SELECT message_text, message_sender, message_datetime 
+            FROM {table_name}
+            WHERE message_text LIKE ?
+            """
+            params = [f"%{query}%"]
+
+            if sender:
+                filter_query += " AND message_sender = ?"
+                params.append(sender)
+
+            if date_from:
+                filter_query += " AND message_datetime >= ?"
+                params.append(date_from)
+
+            if date_to:
+                filter_query += " AND message_datetime <= ?"
+                params.append(date_to)
+
+            filter_query += " ORDER BY message_datetime DESC"
+
+            cursor.execute(filter_query, params)
+            filtered_results = cursor.fetchall()
+            conn.close()
+
+            # Format filtered results
+            if filtered_results:
+                filter_text = f"Filtered search results:\n"
+                filter_text += f"Query: {query}\n"
+                if sender:
+                    filter_text += f"Sender: {sender}\n"
+                if date_from or date_to:
+                    filter_text += f"Date range: {date_from or 'start'} to {date_to or 'end'}\n"
+                filter_text += f"Found {len(filtered_results)} messages\n\n"
+
+                for i, (text, sender_name, datetime) in enumerate(filtered_results[:top_k], 1):
+                    filter_text += f"{i}. [{sender_name}] {datetime}: {text}\n"
+
+                results.append(TextContent(type="text", text=filter_text))
+
+        if not results:
+            return [TextContent(type="text", text="No results found with the specified filters.")]
+
+        return results
+
+    except Exception as e:
+        return [TextContent(
+            type="text",
+            text=f"Advanced search error: {str(e)}"
+        )]
+
+
+async def database_health(check_type: str = "overview") -> list[TextContent]:
+    """Check database health and system status"""
+    try:
+        conn = get_conn()
+        cursor = conn.cursor()
+
+        health_info = []
+
+        if check_type in ["overview", "all"]:
+            # Basic stats
+            cursor.execute(f"SELECT COUNT(*) FROM {table_name}")
+            total_messages = cursor.fetchone()[0]
+
+            cursor.execute(
+                f"SELECT COUNT(DISTINCT message_sender) FROM {table_name}")
+            unique_senders = cursor.fetchone()[0]
+
+            cursor.execute(
+                f"SELECT COUNT(*) FROM {table_name} WHERE embedding IS NOT NULL")
+            messages_with_embeddings = cursor.fetchone()[0]
+
+            cursor.execute(
+                f"SELECT MIN(message_datetime), MAX(message_datetime) FROM {table_name}")
+            date_range = cursor.fetchone()
+
+            health_info.append("=== Database Overview ===")
+            health_info.append(f"Total messages: {total_messages}")
+            health_info.append(f"Unique senders: {unique_senders}")
+            health_info.append(
+                f"Messages with embeddings: {messages_with_embeddings}")
+            health_info.append(
+                f"Date range: {date_range[0]} to {date_range[1]}")
+            if total_messages > 0:
+                health_info.append(
+                    f"Embedding coverage: {(messages_with_embeddings/total_messages*100):.1f}%")
+
+        if check_type in ["performance", "all"]:
+            # Performance stats
+            cursor.execute(f"""
+            SELECT 
+                COUNT(*) as total,
+                AVG(LEN(message_text)) as avg_length,
+                MAX(LEN(message_text)) as max_length
+            FROM {table_name}
+            """)
+            perf_stats = cursor.fetchone()
+
+            health_info.append("\n=== Performance Metrics ===")
+            health_info.append(
+                f"Average message length: {perf_stats[1]:.1f} characters")
+            health_info.append(
+                f"Maximum message length: {perf_stats[2]} characters")
+
+        if check_type in ["recent", "all"]:
+            # Recent activity
+            cursor.execute(f"""
+            SELECT TOP 5 message_sender, COUNT(*) as recent_count
+            FROM {table_name}
+            WHERE message_datetime >= DATEADD(day, -7, GETDATE())
+            GROUP BY message_sender
+            ORDER BY recent_count DESC
+            """)
+            recent_activity = cursor.fetchall()
+
+            health_info.append("\n=== Recent Activity (Last 7 days) ===")
+            for sender, count in recent_activity:
+                health_info.append(f"- {sender}: {count} messages")
+
+        conn.close()
+
+        return [TextContent(type="text", text="\n".join(health_info))]
+
+    except Exception as e:
+        return [TextContent(
+            type="text",
+            text=f"Database health check error: {str(e)}"
+        )]
+
+
+async def activity_patterns(pattern_type: str = "hourly", sender: str = None, date_range: str = None) -> list[TextContent]:
+    """Analyze user activity patterns by time periods"""
+    try:
+        conn = get_conn()
+        cursor = conn.cursor()
+
+        # Build date filter
+        date_filter = ""
+        params = []
+
+        if date_range:
+            if date_range == "last_week":
+                date_filter = " AND message_datetime >= DATEADD(week, -1, GETDATE())"
+            elif date_range == "last_month":
+                date_filter = " AND message_datetime >= DATEADD(month, -1, GETDATE())"
+            elif date_range == "last_year":
+                date_filter = " AND message_datetime >= DATEADD(year, -1, GETDATE())"
+
+        # Build sender filter
+        sender_filter = ""
+        if sender:
+            sender_filter = " AND message_sender = ?"
+            params.append(sender)
+
+        # Build query based on pattern type
+        if pattern_type == "hourly":
+            time_format = "DATEPART(hour, message_datetime)"
+            time_label = "Hour"
+            query = f"""
+            SELECT {time_format} as time_period, COUNT(*) as message_count
+            FROM {table_name}
+            WHERE 1=1 {date_filter} {sender_filter}
+            GROUP BY {time_format}
+            ORDER BY time_period
+            """
+
+        elif pattern_type == "daily":
+            time_format = "DATEPART(weekday, message_datetime)"
+            time_label = "Day of Week"
+            query = f"""
+            SELECT {time_format} as time_period, COUNT(*) as message_count
+            FROM {table_name}
+            WHERE 1=1 {date_filter} {sender_filter}
+            GROUP BY {time_format}
+            ORDER BY time_period
+            """
+
+        elif pattern_type == "weekly":
+            time_format = "DATEPART(week, message_datetime)"
+            time_label = "Week of Year"
+            query = f"""
+            SELECT {time_format} as time_period, COUNT(*) as message_count
+            FROM {table_name}
+            WHERE 1=1 {date_filter} {sender_filter}
+            GROUP BY {time_format}
+            ORDER BY time_period
+            """
+
+        elif pattern_type == "monthly":
+            time_format = "DATEPART(month, message_datetime)"
+            time_label = "Month"
+            query = f"""
+            SELECT {time_format} as time_period, COUNT(*) as message_count
+            FROM {table_name}
+            WHERE 1=1 {date_filter} {sender_filter}
+            GROUP BY {time_format}
+            ORDER BY time_period
+            """
+        else:
+            return [TextContent(type="text", text="Invalid pattern_type. Use: hourly, daily, weekly, or monthly")]
+
+        cursor.execute(query, params)
+        results = cursor.fetchall()
+        conn.close()
+
+        if not results:
+            return [TextContent(type="text", text="No activity data found for the specified criteria")]
+
+        # Format results
+        result_text = f"Activity Patterns Analysis ({pattern_type}):\n"
+        if sender:
+            result_text += f"Sender: {sender}\n"
+        if date_range:
+            result_text += f"Date Range: {date_range}\n"
+        result_text += "\n"
+
+        # Add friendly labels for time periods
+        time_labels = {}
+        if pattern_type == "hourly":
+            time_labels = {i: f"{i:02d}:00" for i in range(24)}
+        elif pattern_type == "daily":
+            time_labels = {1: "Sunday", 2: "Monday", 3: "Tuesday", 4: "Wednesday",
+                           5: "Thursday", 6: "Friday", 7: "Saturday"}
+        elif pattern_type == "monthly":
+            time_labels = {1: "January", 2: "February", 3: "March", 4: "April",
+                           5: "May", 6: "June", 7: "July", 8: "August",
+                           9: "September", 10: "October", 11: "November", 12: "December"}
+
+        # Calculate total for percentage
+        total_messages = sum(count for _, count in results)
+
+        # Create visual bar chart using text
+        max_count = max(count for _, count in results)
+
+        for time_period, count in results:
+            percentage = (count / total_messages) * 100
+            # Scale to 30 characters max
+            bar_length = int((count / max_count) * 30)
+            bar = "█" * bar_length + "░" * (30 - bar_length)
+
+            if pattern_type in time_labels:
+                period_label = time_labels.get(time_period, str(time_period))
+            else:
+                period_label = str(time_period)
+
+            result_text += f"{period_label:12} |{bar}| {count:5d} ({percentage:5.1f}%)\n"
+
+        # Add summary statistics
+        result_text += f"\nSummary:\n"
+        result_text += f"Total messages: {total_messages}\n"
+        result_text += f"Peak activity: {time_labels.get(max(results, key=lambda x: x[1])[0], max(results, key=lambda x: x[1])[0])} ({max(results, key=lambda x: x[1])[1]} messages)\n"
+        result_text += f"Average per {pattern_type[:-2]}: {total_messages / len(results):.1f} messages\n"
+
+        return [TextContent(type="text", text=result_text)]
+
+    except Exception as e:
+        return [TextContent(
+            type="text",
+            text=f"Activity patterns error: {str(e)}"
+        )]
+
+
 async def main():
     """Run the MCP server"""
     debug_print("Starting MCP server...")
@@ -285,7 +913,7 @@ async def main():
     debug_print(f"Database: {database} on {server_host}:{port}")
     debug_print(f"Table: {table_name}")
     debug_print(f"OpenAI Model: {model}")
-    debug_print("Available tools: keyword_search, semantic_search")
+    debug_print("Available tools: keyword_search, semantic_search, message_stats, timeline_analysis, sentiment_analysis, advanced_search, database_health, activity_patterns")
 
     # Test database connection
     if test_database_connection():

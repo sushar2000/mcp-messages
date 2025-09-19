@@ -181,7 +181,7 @@ def main():
         sys.exit(1)
 
     # Process messages in batches
-    batch_size = 50
+    batch_size = 500
     total_processed = 0
 
     try:
