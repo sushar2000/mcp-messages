@@ -48,7 +48,7 @@ USE WhatsAppDB;
 
 
 
-SELECT TOP 10 * FROM KKChat;
+SELECT TOP 10 * FROM KKChat ORDER BY message_datetime asc;
 
 -- DELETE FROM KKChat ;
 

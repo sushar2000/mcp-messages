@@ -298,6 +298,29 @@ async def handle_list_tools() -> list[Tool]:
                     }
                 }
             }
+        ),
+        Tool(
+            name="message_extremes",
+            description="Find earliest or latest messages overall or for specific senders",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "query_type": {
+                        "type": "string",
+                        "description": "Type of query: first, last, earliest, latest, oldest, newest, old, new",
+                        "default": "first"
+                    },
+                    "sender": {
+                        "type": "string",
+                        "description": "Optional: Find extremes for specific sender"
+                    },
+                    "count": {
+                        "type": "integer",
+                        "description": "Number of extreme messages to return",
+                        "default": 1
+                    }
+                }
+            }
         )
     ]
 
@@ -331,6 +354,12 @@ async def handle_call_tool(name: str, arguments: dict) -> list[TextContent]:
             arguments.get("pattern_type", "hourly"),
             arguments.get("sender"),
             arguments.get("date_range")
+        )
+    elif name == "message_extremes":
+        return await message_extremes(
+            arguments.get("query_type", "first"),
+            arguments.get("sender"),
+            arguments.get("count", 1)
         )
     else:
         raise ValueError(f"Unknown tool: {name}")
@@ -906,6 +935,104 @@ async def activity_patterns(pattern_type: str = "hourly", sender: str = None, da
         )]
 
 
+async def message_extremes(query_type: str = "first", sender: str = None, count: int = 1) -> list[TextContent]:
+    """Find earliest or latest messages overall or for specific senders"""
+    try:
+        conn = get_conn()
+        cursor = conn.cursor()
+
+        # Normalize query type and set appropriate description
+        query_type = query_type.lower()
+        if query_type in ["earliest", "first", "oldest", "old"]:
+            order_direction = "ASC"
+            if query_type in ["oldest", "old"]:
+                description = "oldest"
+            else:
+                description = "earliest"
+        elif query_type in ["latest", "last", "newest", "new"]:
+            order_direction = "DESC"
+            if query_type in ["newest", "new"]:
+                description = "newest"
+            else:
+                description = "latest"
+        else:
+            return [TextContent(
+                type="text",
+                text="Invalid query_type. Use: first, last, earliest, latest, oldest, newest, old, or new"
+            )]
+
+        # Build query
+        base_query = f"""
+        SELECT TOP ({count}) message_id, message_datetime, message_sender, message_text
+        FROM {table_name}
+        """
+
+        params = []
+        if sender:
+            base_query += " WHERE message_sender = ?"
+            params.append(sender)
+
+        base_query += f" ORDER BY message_datetime {order_direction}"
+
+        cursor.execute(base_query, params)
+        results = cursor.fetchall()
+
+        # Also get some context about the overall date range
+        context_query = f"""
+        SELECT 
+            MIN(message_datetime) as first_message,
+            MAX(message_datetime) as last_message,
+            COUNT(*) as total_messages
+        FROM {table_name}
+        """
+
+        if sender:
+            context_query += " WHERE message_sender = ?"
+            cursor.execute(context_query, [sender])
+        else:
+            cursor.execute(context_query)
+
+        context = cursor.fetchone()
+        conn.close()
+
+        if not results:
+            return [TextContent(
+                type="text",
+                text=f"No messages found{' for sender ' + sender if sender else ''}."
+            )]
+
+        # Format results
+        result_text = f"=== {description.title()} Message{'s' if count > 1 else ''} ===\n"
+        if sender:
+            result_text += f"Sender: {sender}\n"
+        else:
+            result_text += "Overall chat\n"
+
+        result_text += f"Showing {len(results)} of {context.total_messages} total messages\n"
+        result_text += f"Date range: {context.first_message} to {context.last_message}\n\n"
+
+        for i, (msg_id, datetime, sender_name, text) in enumerate(results, 1):
+            # Truncate very long messages for display
+            display_text = text if len(text) <= 200 else text[:197] + "..."
+            result_text += f"{i}. [{sender_name}] {datetime}\n"
+            result_text += f"   {display_text}\n\n"
+
+        # Add helpful context
+        if not sender and count == 1:
+            if query_type in ["earliest", "first", "oldest", "old"]:
+                result_text += f"🏁 The very first message in your chat was sent by {results[0][2]}"
+            else:
+                result_text += f"🔚 The most recent message in your chat was sent by {results[0][2]}"
+
+        return [TextContent(type="text", text=result_text)]
+
+    except Exception as e:
+        return [TextContent(
+            type="text",
+            text=f"Message extremes error: {str(e)}"
+        )]
+
+
 async def main():
     """Run the MCP server"""
     debug_print("Starting MCP server...")
@@ -913,7 +1040,7 @@ async def main():
     debug_print(f"Database: {database} on {server_host}:{port}")
     debug_print(f"Table: {table_name}")
     debug_print(f"OpenAI Model: {model}")
-    debug_print("Available tools: keyword_search, semantic_search, message_stats, timeline_analysis, sentiment_analysis, advanced_search, database_health, activity_patterns")
+    debug_print("Available tools: keyword_search, semantic_search, message_stats, timeline_analysis, sentiment_analysis, advanced_search, database_health, activity_patterns, message_extremes")
 
     # Test database connection
     if test_database_connection():
