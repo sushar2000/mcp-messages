@@ -65,7 +65,7 @@ def initialize_embeddings(config):
     """Initialize OpenAI embeddings client"""
     openai_config = config.get('openai', {})
 
-    EMBEDDING_MODEL_NAME = "text-embedding-3-large"
+    EMBEDDING_MODEL_NAME = openai_config.get('embedding_model')
     ENV_URL = openai_config.get('env_url')
     OPENAI_API_KEY = openai_config.get('api_key')
     EMBEDDING_MODEL_URL = ENV_URL + "/api/v1/vectors"

@@ -79,6 +79,6 @@ SELECT TOP 10 * FROM KKChat;
 -- DROP TABLE VectorCheck;
 
 -- Query to check for messages without embeddings
-SELECT TOP 100 message_id, message_text 
-            FROM KKChat 
-            WHERE embedding IS NOT NULL 
+SELECT TOP 100 *
+FROM KKChat 
+WHERE embedding IS NOT NULL 

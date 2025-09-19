@@ -31,7 +31,7 @@ if not config:
 # Get OpenAI configuration from config file or use defaults
 openai_config = config.get('openai', {})
 LLM_MODEL_NAME = openai_config.get('model', 'gpt-4o')
-EMBEDDING_MODEL_NAME = "text-embedding-3-large"
+EMBEDDING_MODEL_NAME = openai_config.get('embedding_model')
 
 ENV_URL = openai_config.get('env_url')
 OPENAI_API_KEY = openai_config.get('api_key')

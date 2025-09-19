@@ -1,0 +1,17 @@
+# Core dependencies
+pyodbc>=5.0.0
+openai>=1.0.0
+langchain-openai>=0.1.0
+
+# MCP Server framework
+mcp>=1.0.0
+
+# Standard library extensions (usually included with Python but listed for clarity)
+# json - built-in
+# datetime - built-in
+# pickle - built-in
+# argparse - built-in
+# os - built-in
+# collections - built-in
+# sys - built-in
+# xml - built-in
