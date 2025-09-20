@@ -42,30 +42,43 @@ conn_str = (
 
 
 def create_db_and_table():
-    # Connect to master to create DB if needed
+    # Read SQL commands from setup_db.sql
+    setup_sql_path = os.path.join('db', 'setup_db.sql')
+
+    try:
+        with open(setup_sql_path, 'r', encoding='utf-8') as f:
+            sql_content = f.read()
+    except FileNotFoundError:
+        print(f"Error: SQL setup file '{setup_sql_path}' not found")
+        return
+    except Exception as e:
+        print(f"Error reading SQL setup file: {e}")
+        return
+
+    # Connect to master to execute the setup commands
     master_conn_str = (
         f'DRIVER={{SQL Server}};SERVER={server},{port};DATABASE=master;'
         f'UID={username};PWD={password};'
     )
-    with pyodbc.connect(master_conn_str) as conn:
-        cursor = conn.cursor()
-        cursor.execute(
-            f"IF DB_ID('{database}') IS NULL CREATE DATABASE {database};")
-        conn.commit()
 
-    with pyodbc.connect(conn_str) as conn:
-        cursor = conn.cursor()
-        cursor.execute(f'''
-            IF OBJECT_ID('{table_name}', 'U') IS NULL
-            CREATE TABLE {table_name} (
-                message_id BIGINT IDENTITY PRIMARY KEY,
-                message_datetime DATETIME NOT NULL,
-                message_sender NVARCHAR(100) NOT NULL,
-                message_text NVARCHAR(MAX) NULL,
-                embedding VARBINARY(MAX) NULL
-            );
-        ''')
-        conn.commit()
+    try:
+        with pyodbc.connect(master_conn_str) as conn:
+            cursor = conn.cursor()
+
+            # Split SQL content by semicolons and execute each statement
+            sql_statements = [stmt.strip()
+                              for stmt in sql_content.split(';') if stmt.strip()]
+
+            for statement in sql_statements:
+                if statement:
+                    cursor.execute(statement)
+
+            conn.commit()
+            print("Database and table setup completed successfully using setup_db.sql")
+
+    except Exception as e:
+        print(f"Error executing SQL setup: {e}")
+        return
 
 
 def load_tsv_to_table(tsv_path):
