@@ -46,7 +46,7 @@ def get_database_connection(config):
     db_config = config.get('database', {})
     server = db_config.get('host')
     port = db_config.get('port', 1433)
-    database = db_config.get('dbname')
+    database = db_config.get('db_name')
     username = db_config.get('user')
     password = db_config.get('password')
 
@@ -172,7 +172,7 @@ def main():
     # Connect to database
     try:
         conn = get_database_connection(config)
-        print(f"Connected to database: {db_config.get('dbname')}")
+        print(f"Connected to database: {db_config.get('db_name')}")
     except (pyodbc.Error, pyodbc.DatabaseError) as e:
         print(f"Failed to connect to database: {e}")
         sys.exit(1)

@@ -1,15 +1,18 @@
 {
   "database": {
-    "host": "localhost",
+    "host": "server-name",
     "port": 5432,
-    "user": "dbuser",
-    "password": "dbpass",
-    "dbname": "mydatabase"
+    "db_name": "db-name",
+    "table_name": "KKChat",
+    "user": "db-user",
+    "password": "db-password"
   },
-  "file_path": "/path/to/data/file.csv",
+  "file_paths": ["/path/to/data/file1.csv", "/path/to/data/file2.csv"],
   "openai": {
-    "model": "gpt-4o",
-    "base_url": "https://int.lionis.ai/api/v1/llm/",
+    "llm_model": "gpt-4o",
+    "embedding_model": "text-embedding-3-small",
+    "max_retries": 5,
+    "env_url": "https://int.lionis.ai",
     "api_key": ""
   }
 }

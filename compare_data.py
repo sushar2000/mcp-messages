@@ -1,4 +1,4 @@
-# Script to compare table data with file data row by row
+# Script to compare table data with Tab Separated Values (TSV) file data row by row
 
 import pyodbc
 import argparse
@@ -45,10 +45,10 @@ def initialize_config(config_file='config.json'):
     db_config = config.get('database', {})
     server = db_config.get('host')
     port = db_config.get('port')
-    database = db_config.get('dbname')
+    database = db_config.get('db_name')
+    table_name = db_config.get('table_name')
     user = db_config.get('user')
     password = db_config.get('password')
-    table_name = db_config.get('table_name')
 
     conn_str = (
         f'DRIVER={{SQL Server}};SERVER={server},{port};DATABASE={database};'

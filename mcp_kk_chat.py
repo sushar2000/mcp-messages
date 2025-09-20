@@ -1,3 +1,4 @@
+# MCP Chat - An MCP server to provide AI-powered chat analysis and search on messages stored in a SQL Server database
 import json
 import pyodbc
 from mcp.server import Server
@@ -9,10 +10,9 @@ import sys
 import pickle
 import numpy as np
 
+
 # For MCP servers, we should minimize stdout output since it's used for protocol communication
 # Use stderr for debug messages
-
-
 def debug_print(message):
     """Print debug messages to stderr to avoid interfering with MCP protocol"""
     print(message, file=sys.stderr)
@@ -63,16 +63,16 @@ if not config:
 db_config = config.get('database', {})
 server_host = db_config.get('host')
 port = db_config.get('port', 1433)
-database = db_config.get('dbname')
+database = db_config.get('db_name')
+table_name = db_config.get('table_name')
 username = db_config.get('user')
 password = db_config.get('password')
-table_name = db_config.get('table_name')
 
 # Get OpenAI configuration
 openai_config = config.get('openai', {})
 api_key = openai_config.get('api_key')
 env_url = openai_config.get('env_url')
-model = openai_config.get('model')
+model = openai_config.get('llm_model')
 embedding_model = openai_config.get('embedding_model')
 
 

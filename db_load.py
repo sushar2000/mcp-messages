@@ -1,4 +1,4 @@
-# This script loads message files into the table using pyodbc
+# This script loads Tab Separated Values (TSV) files into the table using pyodbc
 import pyodbc
 import json
 import os
@@ -29,10 +29,10 @@ if not config:
 db_config = config.get('database', {})
 server = db_config.get('host')
 port = db_config.get('port', 1433)
-database = db_config.get('dbname')
+database = db_config.get('db_name')
+table_name = db_config.get('table_name')
 username = db_config.get('user')
 password = db_config.get('password')
-table_name = db_config.get('table_name')
 
 # Use SQL Authentication with the configured credentials
 conn_str = (
