@@ -3,9 +3,7 @@
 import pyodbc
 import argparse
 import json
-import os
 from datetime import datetime
-from collections import defaultdict
 from colors import Colors
 
 

@@ -3,10 +3,6 @@ import pyodbc
 import json
 from colors import Colors
 
-# Load config
-with open('config.json') as f:
-    config = json.load(f)
-
 
 def load_config(config_file='config.json'):
     """Load database configuration from JSON file"""
