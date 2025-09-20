@@ -3,16 +3,17 @@
     "host": "server-name",
     "port": 5432,
     "db_name": "db-name",
-    "table_name": "KKChat",
+    "table_name": "messages",
     "user": "db-user",
     "password": "db-password"
   },
   "file_paths": ["/path/to/data/file1.csv", "/path/to/data/file2.csv"],
   "openai": {
     "llm_model": "gpt-4o",
+    "llm_url": "https://you-llm-endpoint",
     "embedding_model": "text-embedding-3-small",
+    "embedding_model_url": "https://you-embedding-endpoint",
     "max_retries": 5,
-    "env_url": "https://int.lionis.ai",
     "api_key": ""
   }
 }

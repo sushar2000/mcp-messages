@@ -63,9 +63,8 @@ def initialize_embeddings(config):
     openai_config = config.get('openai', {})
 
     EMBEDDING_MODEL_NAME = openai_config.get('embedding_model')
-    ENV_URL = openai_config.get('env_url')
     OPENAI_API_KEY = openai_config.get('api_key')
-    EMBEDDING_MODEL_URL = ENV_URL + "/api/v1/vectors"
+    EMBEDDING_MODEL_URL = openai_config.get('embedding_model_url')
 
     embeddings = OpenAIEmbeddings(
         model=EMBEDDING_MODEL_NAME,
@@ -90,8 +89,6 @@ def get_messages_without_embeddings(conn, table_name, batch_size=50):
             FROM {table_name} 
             WHERE embedding IS NULL 
             AND message_text IS NOT NULL 
-            AND message_text != ''
-            AND message_text != '<Media omitted>'
             ORDER BY message_datetime
         """)
 

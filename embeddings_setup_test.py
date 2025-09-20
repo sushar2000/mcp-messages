@@ -136,19 +136,18 @@ def test_openai_connection():
     try:
         from langchain_openai import OpenAIEmbeddings
 
-        openai_config = config.get('openai', {})
-        EMBEDDING_MODEL_NAME = openai_config.get('embedding_model')
-        ENV_URL = openai_config.get('env_url')
-        OPENAI_API_KEY = openai_config.get('api_key')
-        EMBEDDING_MODEL_URL = ENV_URL + "/api/v1/vectors"
+        openai_config = config.get('openai')
+        embedding_model_name = openai_config.get('embedding_model')
+        openai_api_key = openai_config.get('api_key')
+        embedding_model_url = openai_config.get('embedding_model_url')
 
         embeddings = OpenAIEmbeddings(
-            model=EMBEDDING_MODEL_NAME,
-            openai_api_base=EMBEDDING_MODEL_URL,
-            openai_api_key=OPENAI_API_KEY,
+            model=embedding_model_name,
+            openai_api_base=embedding_model_url,
+            openai_api_key=openai_api_key,
         )
 
-        print(f"✓ Embeddings initialized with model: {EMBEDDING_MODEL_NAME}")
+        print(f"✓ Embeddings initialized with model: {embedding_model_name}")
 
         # Test with a simple message
         test_text = "Hello, this is a test message for embedding generation."
@@ -187,15 +186,14 @@ def update_sample_embeddings():
 
         # Setup OpenAI embeddings
         openai_config = config.get('openai', {})
-        EMBEDDING_MODEL_NAME = openai_config.get('embedding_model')
-        ENV_URL = openai_config.get('env_url')
-        OPENAI_API_KEY = openai_config.get('api_key')
-        EMBEDDING_MODEL_URL = ENV_URL + "/api/v1/vectors"
+        embedding_model_name = openai_config.get('embedding_model')
+        openai_api_key = openai_config.get('api_key')
+        embedding_model_url = openai_config.get('embedding_model_url')
 
         embeddings = OpenAIEmbeddings(
-            model=EMBEDDING_MODEL_NAME,
-            openai_api_base=EMBEDDING_MODEL_URL,
-            openai_api_key=OPENAI_API_KEY,
+            model=embedding_model_name,
+            openai_api_base=embedding_model_url,
+            openai_api_key=openai_api_key,
         )
 
         # Connect to database
@@ -208,8 +206,6 @@ def update_sample_embeddings():
             FROM {table_name} 
             WHERE embedding IS NULL 
             AND message_text IS NOT NULL 
-            AND message_text != ''
-            AND message_text != '<Media omitted>'
             ORDER BY message_datetime
         """)
 

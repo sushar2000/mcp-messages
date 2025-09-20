@@ -71,21 +71,22 @@ password = db_config.get('password')
 # Get OpenAI configuration
 openai_config = config.get('openai', {})
 api_key = openai_config.get('api_key')
-env_url = openai_config.get('env_url')
+llm_url = openai_config.get('llm_url')
 model = openai_config.get('llm_model')
 embedding_model = openai_config.get('embedding_model')
+embedding_model_url = openai_config.get('embedding_model_url')
 
 
 # Initialize OpenAI client with configuration
-if env_url:
+if llm_url:
     # Separate clients for LLM and embeddings
     client = OpenAI(
-        base_url=f"{env_url}/api/v1/llm/",
+        base_url=llm_url,
         api_key=api_key
     )
     # Create a separate client for embeddings
     embedding_client = OpenAI(
-        base_url=f"{env_url}/api/v1/vectors",
+        base_url=embedding_model_url,
         api_key=api_key
     )
 else:
@@ -93,7 +94,7 @@ else:
     embedding_client = client  # Use same client for standard OpenAI API
 
 # Create MCP server
-server = Server("sql-messages")
+server = Server("mcp-messages")
 debug_print("MCP server initialized successfully.")
 debug_print(
     f"Configuration loaded - Database: {database}, OpenAI Model: {model}")
