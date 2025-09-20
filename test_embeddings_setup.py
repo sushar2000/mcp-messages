@@ -8,7 +8,7 @@ import pyodbc
 import json
 import pickle
 from datetime import datetime
-from compare_data import Colors
+from colors import Colors
 
 
 def serialize_embedding(vector):
@@ -267,7 +267,7 @@ def update_sample_embeddings():
 
 def main():
     """Main function to run tests"""
-    print(f"{Colors.GREEN}=== KKChat Embedding Update - Connection Test ==={Colors.RESET}")
+    print(f"{Colors.GREEN}=== Embedding Update - Connection Test ==={Colors.RESET}")
 
     # Test database connection
     db_success = test_database_connection()

@@ -1,5 +1,6 @@
 import pyodbc
 import json
+from colors import Colors, success, info
 
 # Load config
 with open('config.json') as f:
@@ -10,21 +11,29 @@ conn_str = f"DRIVER={{SQL Server}};SERVER={db['host']},{db['port']};DATABASE={db
 conn = pyodbc.connect(conn_str)
 cursor = conn.cursor()
 
-cursor.execute('SELECT COUNT(*) FROM KKChat WHERE embedding IS NOT NULL')
+cursor.execute(
+    f'SELECT COUNT(*) FROM {db["table_name"]} WHERE embedding IS NOT NULL')
 with_embeddings = cursor.fetchone()[0]
 
-cursor.execute('SELECT COUNT(*) FROM KKChat')
+cursor.execute(f'SELECT COUNT(*) FROM {db["table_name"]}')
 total = cursor.fetchone()[0]
 
-print(f'Total messages: {total}')
-print(f'Messages with embeddings: {with_embeddings}')
+print(
+    f'Total messages: {Colors.CYAN}{total}{Colors.RESET}')
+print(
+    f'Messages with embeddings: {Colors.CYAN}{with_embeddings}{Colors.RESET}')
+
+# Show coverage percentage
+coverage = (with_embeddings / total * 100) if total > 0 else 0
+print(f'\nEmbedding coverage: {Colors.GREEN}{coverage:.1f}%{Colors.RESET}')
 
 # Show a sample of messages with embeddings
 cursor.execute(
-    'SELECT TOP 3 message_id, message_text FROM KKChat WHERE embedding IS NOT NULL')
+    f'SELECT TOP 3 message_id, message_text FROM {db["table_name"]} WHERE embedding IS NOT NULL')
 rows = cursor.fetchall()
-print('\nSample messages with embeddings:')
+print(f'\n{Colors.YELLOW}Sample messages with embeddings:{Colors.RESET}')
 for row in rows:
-    print(f'{row.message_id}: {row.message_text[:50]}...')
+    print(
+        f'{Colors.CYAN}{row.message_id}{Colors.RESET}: {row.message_text[:50]}...')
 
 conn.close()

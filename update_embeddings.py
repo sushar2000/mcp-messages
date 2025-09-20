@@ -1,8 +1,5 @@
-#!/usr/bin/env python3
-"""
-Script to read from KKChat table and update embeddings in the last column.
-This script processes messages in batches and generates embeddings using OpenAI API.
-"""
+# Script to read from table and update embeddings in the last column.
+# This script processes messages in batches and generates embeddings using OpenAI API.
 
 import pyodbc
 import json
@@ -10,7 +7,7 @@ import sys
 import pickle
 from datetime import datetime
 from langchain_openai import OpenAIEmbeddings
-from compare_data import Colors
+from colors import Colors
 
 
 def load_config(config_file='config.json'):
@@ -242,7 +239,7 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(
-        description='Update embeddings for KKChat messages')
+        description='Update embeddings column in messages table')
     parser.add_argument('-c', '--config', default='config.json',
                         help='Path to configuration file (default: config.json)')
     parser.add_argument('--dry-run', action='store_true',

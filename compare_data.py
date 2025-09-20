@@ -1,20 +1,12 @@
-# Script to compare KKChat table with KKChat.tsv file row by row
+# Script to compare table data with file data row by row
+
 import pyodbc
 import argparse
 import json
 import os
 from datetime import datetime
 from collections import defaultdict
-
-# ANSI color codes for terminal output
-
-
-class Colors:
-    GREEN = '\033[92m'     # Green for 100% matches
-    YELLOW = '\033[93m'    # Yellow for 90-99% matches
-    CYAN = '\033[96m'
-    RED = '\033[91m'       # Red for errors
-    RESET = '\033[0m'      # Reset to normal color
+from colors import Colors
 
 
 def load_config(config_file='config.json'):
@@ -95,7 +87,7 @@ def read_tsv_file(file_path):
 
 
 def read_db_table():
-    """Read KKChat table and return list of tuples (message_date, message_sender, message_text)"""
+    """Read table and return list of tuples (message_date, message_sender, message_text)"""
     db_data = []
     try:
         with pyodbc.connect(conn_str) as conn:
@@ -367,7 +359,7 @@ def compare_data(tsv_file_path, verbose=False, limit=None):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
-        description='Compare KKChat table with all TSV files from config')
+        description='Compare table with all TSV files from config')
     parser.add_argument('-v', '--verbose', nargs='?', const='brief', default=False,
                         choices=['brief', 'standard', 'all'],
                         help='Show detailed row-by-row comparison information. Options: brief (no matching rows), standard (sample), all (all matching rows)')

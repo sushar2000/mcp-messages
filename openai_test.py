@@ -5,7 +5,7 @@ from langchain_openai import ChatOpenAI
 import json
 
 
-from compare_data import Colors
+from colors import Colors
 
 
 def load_config(config_file='config.json'):

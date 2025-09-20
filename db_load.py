@@ -1,9 +1,9 @@
-# This script loads KKChat.tsv into the KKChat table in WhatsAppDB using pyodbc
+# This script loads message files into the table using pyodbc
 import pyodbc
 import json
 import os
 
-from compare_data import Colors
+from colors import Colors
 
 
 def load_config(config_file='config.json'):

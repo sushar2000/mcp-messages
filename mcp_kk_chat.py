@@ -613,7 +613,7 @@ async def sentiment_analysis(query: str = None, sender: str = None, top_k: int =
         # Use OpenAI LLM for sentiment analysis
         messages_text = "\n".join([f"Message: {row[0]}" for row in results])
 
-        prompt = f"""Analyze the sentiment of these WhatsApp messages. For each message, provide:
+        prompt = f"""Analyze the sentiment of these messages. For each message, provide:
 1. Overall sentiment (Positive/Negative/Neutral)
 2. Emotion detected (joy, sadness, anger, excitement, etc.)
 3. Brief explanation
