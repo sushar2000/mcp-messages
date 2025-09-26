@@ -35,11 +35,11 @@ def cosine_similarity(vec1, vec2):
 
 def load_config(config_file='config.json'):
     """Load configuration from JSON file"""
-    try:
-        # Get the directory where this script is located
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        config_path = os.path.join(script_dir, config_file)
+    # Get the directory where this script is located
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    config_path = os.path.join(script_dir, config_file)
 
+    try:
         with open(config_path, 'r', encoding='utf-8') as f:
             debug_print(f"Configuration loaded from file '{config_path}'")
             return json.load(f)
@@ -49,6 +49,35 @@ def load_config(config_file='config.json'):
     except json.JSONDecodeError as e:
         debug_print(f"Error: Invalid JSON in configuration file: {e}")
         return None
+
+
+def load_nicknames(nicknames_file='nicknames.json'):
+    """Load nicknames from JSON file and build reverse mapping"""
+    # Get the directory where this script is located
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    nicknames_path = os.path.join(script_dir, nicknames_file)
+
+    try:
+        with open(nicknames_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+            nicknames = data.get('nicknames', {})
+
+            # Build reverse mapping dynamically
+            reverse_mapping = {}
+            for real_name, nicks in nicknames.items():
+                for nick in nicks:
+                    reverse_mapping[nick] = real_name
+
+            debug_print(
+                f"Nicknames loaded from file '{nicknames_path}' - {len(nicknames)} people, {len(reverse_mapping)} nicknames")
+            return nicknames, reverse_mapping
+    except FileNotFoundError:
+        debug_print(
+            f"Warning: Nicknames file '{nicknames_path}' not found. Using empty mappings.")
+        return {}, {}
+    except json.JSONDecodeError as e:
+        debug_print(f"Error: Invalid JSON in nicknames file: {e}")
+        return {}, {}
 
 
 # Load configuration
@@ -76,6 +105,9 @@ model = openai_config.get('llm_model')
 embedding_model = openai_config.get('embedding_model')
 embedding_model_url = openai_config.get('embedding_model_url')
 
+# Load nicknames
+nicknames, nickname_reverse_mapping = load_nicknames()
+
 
 # Initialize OpenAI client with configuration
 if llm_url:
@@ -98,6 +130,30 @@ server = Server("mcp-messages")
 debug_print("MCP server initialized successfully.")
 debug_print(
     f"Configuration loaded - Database: {database}, OpenAI Model: {model}")
+
+# Nickname helper functions
+
+
+def get_real_name(nickname_or_name):
+    """Get the real name from a nickname or return the name if already real."""
+    return nickname_reverse_mapping.get(nickname_or_name, nickname_or_name)
+
+
+def get_nicknames_for_person(real_name):
+    """Get all nicknames for a given real name."""
+    return nicknames.get(real_name, [])
+
+
+def normalize_sender_name(sender):
+    """Normalize a sender name to the real name."""
+    return get_real_name(sender)
+
+
+def get_all_names_for_person(input_name):
+    """Get all possible names (real name + nicknames) for a person."""
+    real_name = normalize_sender_name(input_name)
+    all_names = [real_name] + get_nicknames_for_person(real_name)
+    return list(set(all_names))  # Remove duplicates
 
 # Connect to SQL Server using configuration
 
@@ -322,6 +378,42 @@ async def handle_list_tools() -> list[Tool]:
                     }
                 }
             }
+        ),
+        Tool(
+            name="nickname_lookup",
+            description="Look up nickname information for a person or get real name from nickname",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "Name or nickname to look up"
+                    }
+                },
+                "required": ["name"]
+            }
+        ),
+        Tool(
+            name="nickname_list",
+            description="List all people and their nicknames",
+            inputSchema={
+                "type": "object",
+                "properties": {}
+            }
+        ),
+        Tool(
+            name="nickname_search",
+            description="Search for people by partial name or nickname match",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "pattern": {
+                        "type": "string",
+                        "description": "Pattern to search for in names and nicknames"
+                    }
+                },
+                "required": ["pattern"]
+            }
         )
     ]
 
@@ -362,6 +454,12 @@ async def handle_call_tool(name: str, arguments: dict) -> list[TextContent]:
             arguments.get("sender"),
             arguments.get("count", 1)
         )
+    elif name == "nickname_lookup":
+        return await nickname_lookup(arguments.get("name") or "")
+    elif name == "nickname_list":
+        return await nickname_list()
+    elif name == "nickname_search":
+        return await nickname_search(arguments.get("pattern") or "")
     else:
         raise ValueError(f"Unknown tool: {name}")
 
@@ -1031,6 +1129,133 @@ async def message_extremes(query_type: str = "first", sender: str = None, count:
         return [TextContent(
             type="text",
             text=f"Message extremes error: {str(e)}"
+        )]
+
+
+# Nickname management functions
+async def nickname_lookup(name: str) -> list[TextContent]:
+    """Look up nickname information for a person or get real name from nickname"""
+    try:
+        if not name:
+            return [TextContent(type="text", text="Please provide a name or nickname to lookup.")]
+
+        # Get real name (this will return the input if it's already a real name)
+        real_name = get_real_name(name)
+
+        # Get all nicknames for this person
+        person_nicknames = get_nicknames_for_person(real_name)
+
+        # Build response
+        result_text = f"=== Nickname Lookup for '{name}' ===\n"
+        result_text += f"Real Name: {real_name}\n"
+
+        if person_nicknames:
+            result_text += f"Nicknames: {', '.join(person_nicknames)}\n"
+        else:
+            result_text += "Nicknames: None\n"
+
+        # Show if the input was a nickname
+        if name != real_name:
+            result_text += f"\nNote: '{name}' is a nickname for '{real_name}'\n"
+
+        # Show all possible names for this person
+        all_names = get_all_names_for_person(name)
+        result_text += f"All known names: {', '.join(all_names)}"
+
+        return [TextContent(type="text", text=result_text)]
+
+    except Exception as e:
+        return [TextContent(
+            type="text",
+            text=f"Nickname lookup error: {str(e)}"
+        )]
+
+
+async def nickname_list() -> list[TextContent]:
+    """List all people and their nicknames"""
+    try:
+        result_text = "=== Complete Nickname Directory ===\n\n"
+
+        # Get statistics
+        total_people = len(nicknames)
+        people_with_nicknames = len(
+            [name for name, nicks in nicknames.items() if nicks])
+        total_nicknames = sum(len(nicks) for nicks in nicknames.values())
+
+        result_text += f"Total People: {total_people}\n"
+        result_text += f"People with Nicknames: {people_with_nicknames}\n"
+        result_text += f"Total Nicknames: {total_nicknames}\n"
+        result_text += f"Average Nicknames per Person: {total_nicknames / total_people:.1f}\n\n"
+
+        # List all people and their nicknames
+        result_text += "Directory:\n"
+        result_text += "-" * 50 + "\n"
+
+        for real_name in sorted(nicknames.keys()):
+            person_nicknames = nicknames[real_name]
+            if person_nicknames:
+                nickname_str = ', '.join(
+                    f'"{nick}"' for nick in person_nicknames)
+                result_text += f"{real_name:<25} → {nickname_str}\n"
+            else:
+                result_text += f"{real_name:<25} → (no nicknames)\n"
+
+        return [TextContent(type="text", text=result_text)]
+
+    except Exception as e:
+        return [TextContent(
+            type="text",
+            text=f"Nickname list error: {str(e)}"
+        )]
+
+
+async def nickname_search(pattern: str) -> list[TextContent]:
+    """Search for people by partial name or nickname match"""
+    try:
+        if not pattern:
+            return [TextContent(type="text", text="Please provide a search pattern.")]
+
+        pattern_lower = pattern.lower()
+        matches = {}
+
+        # Search in real names
+        for real_name in nicknames:
+            if pattern_lower in real_name.lower():
+                matches[real_name] = nicknames[real_name]
+
+        # Search in nicknames
+        for real_name, person_nicknames in nicknames.items():
+            if real_name not in matches:  # Don't add duplicates
+                for nickname in person_nicknames:
+                    if pattern_lower in nickname.lower():
+                        matches[real_name] = person_nicknames
+                        break
+
+        if not matches:
+            return [TextContent(
+                type="text",
+                text=f"No matches found for pattern '{pattern}'"
+            )]
+
+        # Format results
+        result_text = f"=== Search Results for '{pattern}' ===\n"
+        result_text += f"Found {len(matches)} match{'es' if len(matches) != 1 else ''}:\n\n"
+
+        for real_name in sorted(matches.keys()):
+            person_nicknames = matches[real_name]
+            if person_nicknames:
+                nickname_str = ', '.join(
+                    f'"{nick}"' for nick in person_nicknames)
+                result_text += f"{real_name:<25} → {nickname_str}\n"
+            else:
+                result_text += f"{real_name:<25} → (no nicknames)\n"
+
+        return [TextContent(type="text", text=result_text)]
+
+    except Exception as e:
+        return [TextContent(
+            type="text",
+            text=f"Nickname search error: {str(e)}"
         )]
 
 

@@ -92,7 +92,28 @@ Edit `config.json` with your database and OpenAI API details:
 }
 ```
 
-### 3. Database Schema
+### 3. Add Nicknames Data
+
+Copy the sample nicknames file and update it with your data:
+
+```bash
+cp nicknames-sample.json nicknames.json
+```
+
+Edit `nicknames.json` with your database:
+
+```json
+{
+  "nicknames": {
+    "Message Sender 1": ["MS1", "Sender1"],
+    "Message Sender 2": ["MS2", "Sender2", "Person"],
+    "Message Sender 3": ["MS3"],
+    "Message Sender 4": []
+  }
+}
+```
+
+### 4. Database Schema
 
 Initialize the database schema using the setup script:
 
